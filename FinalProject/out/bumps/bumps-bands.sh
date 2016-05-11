@@ -1,5 +1,7 @@
 #!/bin/sh
 
+echo "- bumps-bands"
+
 if [ ! -d ./bands/multi-k ]
 then
 	mkdir bands/multi-k
@@ -9,21 +11,21 @@ cd bands/multi-k/
 
 ctlfile="../../bumps-bands.ctl"
 
-# echo "calculating flux and ldos for unit cell"
+# echo "  bumps: calculating flux and ldos for unit cell"
 
 # # calculate fluxes and ldos in the unit cell
 # meep resolution=100 flux-mode?=true $ctlfile > fluxmode.out
 # grep ldos0: fluxmode.out > ldos.out
 # grep flux1: fluxmode.out > fluxes.out
 
-echo "calculating band structure for unit cell"
+echo "  bumps: calculating band structure for unit cell"
 
 # calculate band structure in unit cell
 meep $ctlfile > bands.out
 grep freqs: bands.out > fre.out
 grep freqs-im: bands.out > fim.out
 
-echo "organizing files"
+echo "  bumps: organizing files"
 
 # equalize row length
 python ../../../../cleanCSV.py fre.out
@@ -41,3 +43,5 @@ do
 done
 
 cd ../..
+
+echo "+ bumps-bands"

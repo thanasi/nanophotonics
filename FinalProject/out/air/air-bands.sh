@@ -1,5 +1,7 @@
 #!/bin/sh
 
+echo "- air-bands"
+
 if [ ! -d ./bands/multi-k ]
 then
 	mkdir bands/multi-k
@@ -9,15 +11,19 @@ cd bands/multi-k/
 
 ctlfile="../../air-bands.ctl"
 
-# calculate fluxes and ldos in the unit cell
-meep flux-mode?=true $ctlfile > fluxmode.out
-grep ldos0: fluxmode.out > ldos.out
-grep flux1: fluxmode.out > fluxes.out
+# # calculate fluxes and ldos in the unit cell
+# meep flux-mode?=true $ctlfile > fluxmode.out
+# grep ldos0: fluxmode.out > ldos.out
+# grep flux1: fluxmode.out > fluxes.out
+
+echo "  air: calculating band structure for unit cell"
 
 # calculate band structure in unit cell
 meep $ctlfile > bands.out
 grep freqs: bands.out > fre.out
 grep freqs-im: bands.out > fim.out
+
+echo "  air: organizing files"
 
 # equalize row length
 python ../../../../cleanCSV.py fre.out
@@ -35,3 +41,5 @@ do
 done
 
 cd ../..
+
+echo "+ air-bands"

@@ -1,7 +1,7 @@
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
-from mpl_toolkits.axes_grid import inset_locator
+from mpl_toolkits.axes_grid import inset_locator, make_axes_locatable
 
 import os
 import fnmatch
@@ -36,7 +36,7 @@ def get_pos_finite(arr):
 
 ##############################################################
 
-working_dir = "/Users/thanasi/ipynb/classes/Nanophotonics (18.369)/FinalProject/waveguide/out/"
+working_dir = "/Users/thanasi/ipynb/classes/Nanophotonics (18.369)/FinalProject/out/"
 os.chdir(working_dir)
 
 structures = ['air', 'straight', 'holes', 'bumps']
@@ -68,7 +68,7 @@ def get_fluxes(s, subdir, scale=1):
                      header=None, index_col=0, usecols=[1,2,3,4,5],
                      names=["freq", "top", "right","bottom","left"])
 
-    fluxes=fluxes[0:0.5]
+    fluxes = fluxes[0:0.5]
 
     # switch the sign of the fluxes to represent outward flux
     fluxes["bottom"] *= scale
@@ -101,13 +101,13 @@ def get_bands_re(s, subdir):
 
 def get_kpwr(s):
 
-    dir = './%s/bands/' % s
-    kfolders = os.listdir(dir)
+    out_dir = './%s/bands/' % s
+    kfolders = os.listdir(out_dir)
     kfolders = fnmatch.filter(kfolders, 'k*')
-    parse_k = lambda s: float(s[1:])
+    parse_k = lambda x: float(x[1:])
     ks = list(map(parse_k, kfolders))
 
-    omegas = pd.read_csv(dir+kfolders[0]+'/fluxes.out',
+    omegas = pd.read_csv(out_dir+kfolders[0]+'/fluxes.out',
                      header=None,  usecols=[1],
                      names=["freq"])["freq"].values
 
@@ -116,7 +116,7 @@ def get_kpwr(s):
     kpwr.major_axis.set_names('freq', inplace=True)
 
     for k, kf in zip(ks,kfolders):
-        pwr = pd.read_csv(dir + kf + '/fluxes.out',
+        pwr = pd.read_csv(out_dir + kf + '/fluxes.out',
                             header=None, index_col=0, usecols=[1,2,3,4,5],
                              names=['freq', 'top','right','bottom','left'])
 
@@ -212,6 +212,7 @@ def build_composite_band_plot(res, res0):
     ax1 = plt.subplot(gs1[:,:])
     ax2 = plt.subplot(gs2[:,:], sharey=ax1)
     ax3 = ax2.twiny()
+
     plt.setp(ax2.get_yticklabels(), visible=False)
 
     # ratio.plot(ax=ax2, lw=3)
@@ -251,9 +252,13 @@ def build_composite_band_plot(res, res0):
     # add an inset image of epsilon
     a = inset_locator.inset_axes(ax1, height=1.8, width=0.225, loc=8,
                                  bbox_to_anchor=(0.9, 0.01), bbox_transform=ax1.transAxes)
-    a.imshow(res.epsilon, extent=(X_min,X_max, Y_min, Y_max), cmap=plt.cm.gray)
+    a.imshow(res.epsilon, extent=(X_min,X_max, Y_min, Y_max), cmap=plt.cm.gray_r)
 
     a.set_aspect("equal")
+
+    for s in [a.spines["right"], a.spines["left"]]:
+        s.set_linestyle("--")
+
 
     plt.setp(a.xaxis, visible=False)
     plt.setp(a.yaxis, visible=False)
@@ -276,25 +281,55 @@ def plot_band_structures(res, res0):
 
     return fig
 
-def plot_omega_k_power(res, res0):
+def plot_omega_k_power(res, res0, norm=None):
 
     fig = build_composite_band_plot(res, res0)
     ax = fig.get_axes()[0]
-    ax_ins = fig.get_axes()[-1]
 
-    im = res.kpwr.sum(2)
+    gs3 = mpl.gridspec.GridSpec(1,1)
+    gs3.update(left=0.05, right=0.71, bottom=0.72, top=0.74)
 
-    ax.imshow(np.log(im), extent=(0,0.5,0.5,0),
-              cmap=plt.cm.viridis, vmin=0, vmax=2,
-              interpolation='nearest')
+    cax = plt.subplot(gs3[:,:], )
+
+    im = res.kpwr.sum(2).values
+
+    # make the arrays square
+    si, sj = im.shape
+    I, J = np.mgrid[:si, :sj-1:0.25]
+    I = np.floor(I).astype(np.uint)
+    J = np.floor(J).astype(np.uint)
+
+    im = im[I,J]
+
+    vmin = 0
+    vmax = 2
+
+    if norm is not None:
+        norm = norm[I,J]
+
+        im /= norm
+        vmin = -1
+        vmax = 3
+
+    # get rid of data outside of the light cone
+    im *= np.tril(im)
+
+    i0 = ax.imshow(np.log10(im), extent=(0,0.5,0.5,0),
+                    cmap=plt.cm.viridis, vmin=vmin, vmax=vmax,
+                    interpolation='nearest')
+
+    plt.colorbar(i0, cax=cax, orientation='horizontal', ticks=[vmin, vmax])
+    cax.xaxis.set_label_position('top')
+    cax.xaxis.set_ticks_position('top')
+
+    if norm is not None:
+        cax.set_xlabel("Radiated Power rel. to air (log scale)", labelpad=-10, fontdict=dict(fontsize=14))
+    else:
+        cax.set_xlabel("Radiated Power (log scale)", labelpad=-10, fontdict=dict(fontsize=14))
 
     k0 = [0,0.5]
     ax.plot(k0,k0,c='k')
-    ax.fill_betweenx([0,0.5], [0,0.5], 0.5, facecolor='#000000')
-
-    for _,s in ax_ins.spines.items():
-        s.set_color("#ffffff")
-
+    # ax.fill_betweenx([0,0.5], [0,0.5], 0.5, facecolor='#000000')
 
     return fig
 
@@ -350,7 +385,7 @@ def output_band_diagram(res0, structs = structures, save=True):
 
     return res
 
-def output_omega_k_power(res0, structs = structures, save=True):
+def output_omega_k_power(res0, structs = structures, save=True, norm=False):
 
     res = {}
 
@@ -360,7 +395,12 @@ def output_omega_k_power(res0, structs = structures, save=True):
         r.epsilon = get_epsilon(s, 'bands/multi-k')
         r.kpwr = get_kpwr(s)
 
-        r.fig = plot_omega_k_power(r, res0[s])
+        if norm and ("air" in res.keys()):
+            nrm = res["air"].kpwr.sum(axis=2).values
+        else:
+            nrm = None
+
+        r.fig = plot_omega_k_power(r, res0[s], norm=nrm)
         if save:
             r.fig.savefig("./fig/%s.omega_k_power.pdf" % s, facecolor='none', bbox_inches='tight')
 

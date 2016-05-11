@@ -1,5 +1,7 @@
 #!/bin/sh
 
+echo "- straight-bands"
+
 if [ ! -d ./bands/multi-k ]
 then
 	mkdir bands/multi-k
@@ -9,22 +11,22 @@ cd bands/multi-k/
 
 ctlfile="../../straight-bands.ctl"
 
-echo "calculating flux and ldos for unit cell"
+# echo "  straight: calculating flux and ldos for unit cell"
 
-# calculate fluxes and ldos in the unit cell
-meep flux-mode?=true $ctlfile > fluxmode.out
-grep ldos0: fluxmode.out > ldos.out
-grep flux1: fluxmode.out > fluxes.out
+# # calculate fluxes and ldos in the unit cell
+# meep flux-mode?=true $ctlfile > fluxmode.out
+# grep ldos0: fluxmode.out > ldos.out
+# grep flux1: fluxmode.out > fluxes.out
 
 
-echo "calculating band structure for unit cell"
+echo "  straight: calculating band structure for unit cell"
 
 # calculate band structure in unit cell
 meep $ctlfile > bands.out
 grep freqs: bands.out > fre.out
 grep freqs-im: bands.out > fim.out
 
-echo "organizing files"
+echo "  straight: organizing files"
 
 # equalize row length
 python ../../../../cleanCSV.py fre.out
@@ -42,3 +44,5 @@ do
 done
 
 cd ../..
+
+echo "+ straight-bands"
