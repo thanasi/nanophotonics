@@ -1,5 +1,5 @@
 # Nanophotonics (18.369) Coursework
 
-## Athanasios G. Athanassiadis
+### Athanasios G. Athanassiadis
 
-### Spring 2016
+#### Spring 2016
